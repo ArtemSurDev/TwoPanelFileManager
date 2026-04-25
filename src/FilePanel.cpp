@@ -22,16 +22,16 @@ QString FilePanel::getSelectedItem() const {
 void FilePanel::refresh() {
     clear();
     QDir dir(currentPath);
-
-    addItem("..");
-
+    if (currentPath != "/") {
+        addItem("..");
+    }
     for (const auto& file : dir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot)) {
         addItem(file);
     }
 }
 
 void FilePanel::keyPressEvent(QKeyEvent* event) {
-    if (event->key() == Qt::Key_Return) {
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         emit enterPressed();
     }
     QListWidget::keyPressEvent(event);

@@ -1,22 +1,24 @@
 #pragma once
-
 #include <QMainWindow>
 #include "FilePanel.h"
+#include "PanelMediator.h"
+#include "FileCommand.h"
+#include <QVector>
 
 class MainWindow : public QMainWindow {
-    Q_OBJECT
+Q_OBJECT
 
 public:
     MainWindow();
+    ~MainWindow();
 
 private:
     FilePanel* leftPanel;
     FilePanel* rightPanel;
-    FilePanel* activePanel;
-
+    PanelMediator* mediator;
+    QVector<FileCommand*> commandHistory;
     void setupUI();
-    void switchPanel();
-    void handleEnter();
+    void executeCommand(FileCommand* command);
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
