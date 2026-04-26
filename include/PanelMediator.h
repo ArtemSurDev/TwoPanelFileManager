@@ -13,5 +13,6 @@ public:
     FilePanel* getActivePanel() const;
     FilePanel* getInactivePanel() const;
     void handleEnter();
+    void handleBackspace();
     void refreshAllPanels();
 };

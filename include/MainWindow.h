@@ -19,7 +19,5 @@ private:
     QVector<FileCommand*> commandHistory;
     void setupUI();
     void executeCommand(FileCommand* command);
-
-protected:
-    void keyPressEvent(QKeyEvent* event) override;
+    void handleFunctionKey(int key);
 };
