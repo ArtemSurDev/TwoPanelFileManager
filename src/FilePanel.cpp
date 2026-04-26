@@ -32,7 +32,7 @@ void FilePanel::refresh() {
     for (const auto& file : dir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot)) {
         addItem(file);
     }
-    // Select first item so user always has something selected
+    
     if (count() > 0) {
         setCurrentRow(0);
     }
@@ -48,15 +48,15 @@ void FilePanel::setActive(bool active) {
     }
 }
 
-// Override event() to intercept Tab BEFORE Qt's focus system processes it.
-// QWidget::event() handles Tab by calling focusNextChild() before keyPressEvent
-// is ever reached, so keyPressEvent alone cannot reliably catch Tab.
+
+
+
 bool FilePanel::event(QEvent* e) {
     if (e->type() == QEvent::KeyPress) {
         QKeyEvent* ke = static_cast<QKeyEvent*>(e);
         if (ke->key() == Qt::Key_Tab || ke->key() == Qt::Key_Backtab) {
             emit tabPressed();
-            return true;  // Event consumed — Qt will NOT do focus traversal
+            return true;  
         }
     }
     return QListWidget::event(e);
@@ -67,7 +67,7 @@ void FilePanel::keyPressEvent(QKeyEvent* event) {
         case Qt::Key_Return:
         case Qt::Key_Enter:
             emit enterPressed();
-            return;  // Don't pass to QListWidget (prevents edit mode)
+            return;  
         case Qt::Key_Backspace:
             emit backspacePressed();
             return;
@@ -84,13 +84,13 @@ void FilePanel::keyPressEvent(QKeyEvent* event) {
     }
 }
 
-// When panel receives focus (by click or programmatic setFocus), sync the mediator
+
 void FilePanel::focusInEvent(QFocusEvent* event) {
     QListWidget::focusInEvent(event);
     emit panelFocused(this);
 }
 
-// Ensure click on the panel gives it focus and notifies the mediator
+
 void FilePanel::mousePressEvent(QMouseEvent* event) {
     QListWidget::mousePressEvent(event);
     setFocus();
