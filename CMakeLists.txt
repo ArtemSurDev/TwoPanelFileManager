@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Test)
 
 set(SOURCES
         src/main.cpp
@@ -31,3 +31,16 @@ add_executable(file_manager ${SOURCES} ${HEADERS})
 target_include_directories(file_manager PRIVATE include)
 
 target_link_libraries(file_manager Qt6::Core Qt6::Widgets Qt6::Gui)
+
+enable_testing()
+
+add_executable(file_manager_tests
+        tests/FileOperationsFacadeTest.cpp
+        src/FileOperationsFacade.cpp
+        src/FileCommand.cpp
+)
+
+target_include_directories(file_manager_tests PRIVATE include)
+target_link_libraries(file_manager_tests Qt6::Core Qt6::Test)
+
+add_test(NAME file_manager_tests COMMAND file_manager_tests)
