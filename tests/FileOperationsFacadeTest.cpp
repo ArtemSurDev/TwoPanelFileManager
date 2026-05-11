@@ -167,7 +167,7 @@ private slots:
         QVERIFY(!QFile::exists(dst));
     }
 
-    void deleteCommandCannotBeUndone() {
+    void deleteCommandUndoDoesNotRestoreFile() {
         QTemporaryDir tempDir;
         QVERIFY(tempDir.isValid());
         const QString src = QDir(tempDir.path()).filePath("delete.txt");
