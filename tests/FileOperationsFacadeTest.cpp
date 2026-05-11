@@ -6,25 +6,26 @@
 #include "FileOperationsFacade.h"
 #include "FileCommand.h"
 
+namespace {
+bool writeFile(const QString& path, const QByteArray& content) {
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return false;
+    }
+    return file.write(content) == content.size();
+}
+
+QByteArray readFile(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return file.readAll();
+}
+}
+
 class FileOperationsFacadeTest : public QObject {
     Q_OBJECT
-
-private:
-    static bool writeFile(const QString& path, const QByteArray& content) {
-        QFile file(path);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-            return false;
-        }
-        return file.write(content) == content.size();
-    }
-
-    static QByteArray readFile(const QString& path) {
-        QFile file(path);
-        if (!file.open(QIODevice::ReadOnly)) {
-            return {};
-        }
-        return file.readAll();
-    }
 
 private slots:
     void copyFileCreatesDestinationAndCopiesContent() {
@@ -107,16 +108,6 @@ private slots:
 
 class FileCommandTest : public QObject {
     Q_OBJECT
-
-private:
-    static bool writeFile(const QString& path, const QByteArray& content) {
-        QFile file(path);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-            return false;
-        }
-        return file.write(content) == content.size();
-    }
-
 private slots:
     void copyCommandExecuteAndUndo() {
         QTemporaryDir tempDir;
@@ -186,6 +177,7 @@ private slots:
         QVERIFY(command.execute());
         QVERIFY(!QFile::exists(src));
         QVERIFY(!command.undo());
+        QVERIFY(!QFile::exists(src));
     }
 };
 
