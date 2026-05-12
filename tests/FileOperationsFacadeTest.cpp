@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <QCoreApplication>
 #include <QTemporaryDir>
 #include <QFile>
 #include <QDir>
@@ -339,10 +338,4 @@ TEST(FileOperationsFacadeGetLastError, MoveFailureContainsCannotCreateDestinatio
     auto facade = FileOperationsFacade::getInstance();
     EXPECT_FALSE(facade->move(src, dst));
     EXPECT_TRUE(facade->getLastError().contains("Cannot create destination directory"));
-}
-
-int main(int argc, char** argv) {
-    QCoreApplication app(argc, argv);
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }
