@@ -1,341 +1,326 @@
-#include <gtest/gtest.h>
+#include <catch2/catch_test_macros.hpp>
 #include <QTemporaryDir>
 #include <QFile>
 #include <QDir>
 #include "FileOperationsFacade.h"
+#include "TestUtils.h"
 
-namespace {
-bool writeFile(const QString& path, const QByteArray& content) {
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        return false;
-    }
-    return file.write(content) == content.size();
-}
-
-QByteArray readFile(const QString& path) {
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return {};
-    }
-    return file.readAll();
-}
-}
-
-TEST(FileOperationsFacadeCopy, CopiesFileAndContents) {
+TEST_CASE("FileOperationsFacade copy copies file and contents") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("source.txt");
     const QString dst = base.filePath("dest/source.txt");
 
-    ASSERT_TRUE(writeFile(src, "test-data"));
+    REQUIRE(writeFile(src, "test-data"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->copy(src, dst));
-    EXPECT_TRUE(QFile::exists(dst));
-    EXPECT_EQ(readFile(dst), QByteArray("test-data"));
+    REQUIRE(facade->copy(src, dst));
+    CHECK(QFile::exists(dst));
+    CHECK(readFile(dst) == QByteArray("test-data"));
 }
 
-TEST(FileOperationsFacadeCopy, CreatesDestinationDirectory) {
+TEST_CASE("FileOperationsFacade copy creates destination directory") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("source.txt");
     const QString dst = base.filePath("dest/nested/source.txt");
 
-    ASSERT_TRUE(writeFile(src, "nested"));
+    REQUIRE(writeFile(src, "nested"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->copy(src, dst));
-    EXPECT_TRUE(QDir(base.filePath("dest/nested")).exists());
+    REQUIRE(facade->copy(src, dst));
+    CHECK(QDir(base.filePath("dest/nested")).exists());
 }
 
-TEST(FileOperationsFacadeCopy, OverwritesExistingDestinationFile) {
+TEST_CASE("FileOperationsFacade copy overwrites existing destination file") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("source.txt");
     const QString dst = base.filePath("dest/source.txt");
 
-    ASSERT_TRUE(writeFile(src, "new-content"));
-    ASSERT_TRUE(writeFile(dst, "old-content"));
+    REQUIRE(writeFile(src, "new-content"));
+    REQUIRE(QDir().mkpath(base.filePath("dest")));
+    REQUIRE(writeFile(dst, "old-content"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->copy(src, dst));
-    EXPECT_EQ(readFile(dst), QByteArray("new-content"));
+    REQUIRE(facade->copy(src, dst));
+    CHECK(readFile(dst) == QByteArray("new-content"));
 }
 
-TEST(FileOperationsFacadeCopy, CopiesDirectoryRecursively) {
+TEST_CASE("FileOperationsFacade copy copies directory recursively") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString srcDir = base.filePath("srcDir");
     const QString nestedDir = QDir(srcDir).filePath("nested");
     const QString dstDir = base.filePath("dstDir");
 
-    ASSERT_TRUE(QDir().mkpath(nestedDir));
-    ASSERT_TRUE(writeFile(QDir(nestedDir).filePath("file.txt"), "nested"));
+    REQUIRE(QDir().mkpath(nestedDir));
+    REQUIRE(writeFile(QDir(nestedDir).filePath("file.txt"), "nested"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->copy(srcDir, dstDir));
-    EXPECT_TRUE(QFile::exists(QDir(dstDir).filePath("nested/file.txt")));
+    REQUIRE(facade->copy(srcDir, dstDir));
+    CHECK(QFile::exists(QDir(dstDir).filePath("nested/file.txt")));
 }
 
-TEST(FileOperationsFacadeCopy, MissingSourceReturnsFalse) {
+TEST_CASE("FileOperationsFacade copy missing source returns false") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("missing.txt");
     const QString dst = base.filePath("dest/missing.txt");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->copy(src, dst));
+    CHECK_FALSE(facade->copy(src, dst));
 }
 
-TEST(FileOperationsFacadeMove, MovesFileAndRemovesSource) {
+TEST_CASE("FileOperationsFacade move moves file and removes source") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("move.txt");
     const QString dst = base.filePath("target/move.txt");
 
-    ASSERT_TRUE(writeFile(src, "move"));
+    REQUIRE(writeFile(src, "move"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->move(src, dst));
-    EXPECT_FALSE(QFile::exists(src));
-    EXPECT_TRUE(QFile::exists(dst));
+    REQUIRE(facade->move(src, dst));
+    CHECK_FALSE(QFile::exists(src));
+    CHECK(QFile::exists(dst));
 }
 
-TEST(FileOperationsFacadeMove, CreatesDestinationDirectory) {
+TEST_CASE("FileOperationsFacade move creates destination directory") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("move.txt");
     const QString dst = base.filePath("newdir/sub/move.txt");
 
-    ASSERT_TRUE(writeFile(src, "move"));
+    REQUIRE(writeFile(src, "move"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->move(src, dst));
-    EXPECT_TRUE(QDir(base.filePath("newdir/sub")).exists());
-    EXPECT_TRUE(QFile::exists(dst));
+    REQUIRE(facade->move(src, dst));
+    CHECK(QDir(base.filePath("newdir/sub")).exists());
+    CHECK(QFile::exists(dst));
 }
 
-TEST(FileOperationsFacadeMove, OverwritesExistingDestinationFile) {
+TEST_CASE("FileOperationsFacade move overwrites existing destination file") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("move.txt");
     const QString dst = base.filePath("dest/move.txt");
 
-    ASSERT_TRUE(writeFile(src, "new"));
-    ASSERT_TRUE(writeFile(dst, "old"));
+    REQUIRE(writeFile(src, "new"));
+    REQUIRE(QDir().mkpath(base.filePath("dest")));
+    REQUIRE(writeFile(dst, "old"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->move(src, dst));
-    EXPECT_FALSE(QFile::exists(src));
-    EXPECT_EQ(readFile(dst), QByteArray("new"));
+    REQUIRE(facade->move(src, dst));
+    CHECK_FALSE(QFile::exists(src));
+    CHECK(readFile(dst) == QByteArray("new"));
 }
 
-TEST(FileOperationsFacadeMove, MovesDirectoryRecursively) {
+TEST_CASE("FileOperationsFacade move moves directory recursively") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString srcDir = base.filePath("srcDir");
     const QString nestedDir = QDir(srcDir).filePath("nested");
     const QString dstDir = base.filePath("dstDir");
 
-    ASSERT_TRUE(QDir().mkpath(nestedDir));
-    ASSERT_TRUE(writeFile(QDir(nestedDir).filePath("file.txt"), "nested"));
+    REQUIRE(QDir().mkpath(nestedDir));
+    REQUIRE(writeFile(QDir(nestedDir).filePath("file.txt"), "nested"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->move(srcDir, dstDir));
-    EXPECT_FALSE(QDir(srcDir).exists());
-    EXPECT_TRUE(QFile::exists(QDir(dstDir).filePath("nested/file.txt")));
+    REQUIRE(facade->move(srcDir, dstDir));
+    CHECK_FALSE(QDir(srcDir).exists());
+    CHECK(QFile::exists(QDir(dstDir).filePath("nested/file.txt")));
 }
 
-TEST(FileOperationsFacadeMove, MissingSourceReturnsFalse) {
+TEST_CASE("FileOperationsFacade move missing source returns false") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("missing.txt");
     const QString dst = base.filePath("dest/missing.txt");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->move(src, dst));
+    CHECK_FALSE(facade->move(src, dst));
 }
 
-TEST(FileOperationsFacadeRemove, RemovesFile) {
+TEST_CASE("FileOperationsFacade remove removes file") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString path = base.filePath("remove.txt");
 
-    ASSERT_TRUE(writeFile(path, "remove"));
+    REQUIRE(writeFile(path, "remove"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->remove(path));
-    EXPECT_FALSE(QFile::exists(path));
+    REQUIRE(facade->remove(path));
+    CHECK_FALSE(QFile::exists(path));
 }
 
-TEST(FileOperationsFacadeRemove, RemovesEmptyDirectory) {
+TEST_CASE("FileOperationsFacade remove removes empty directory") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString dirPath = base.filePath("emptydir");
 
-    ASSERT_TRUE(QDir().mkpath(dirPath));
+    REQUIRE(QDir().mkpath(dirPath));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->remove(dirPath));
-    EXPECT_FALSE(QDir(dirPath).exists());
+    REQUIRE(facade->remove(dirPath));
+    CHECK_FALSE(QDir(dirPath).exists());
 }
 
-TEST(FileOperationsFacadeRemove, RemovesDirectoryWithContents) {
+TEST_CASE("FileOperationsFacade remove removes directory with contents") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString dirPath = base.filePath("dir");
     const QString filePath = QDir(dirPath).filePath("file.txt");
 
-    ASSERT_TRUE(QDir().mkpath(dirPath));
-    ASSERT_TRUE(writeFile(filePath, "content"));
+    REQUIRE(QDir().mkpath(dirPath));
+    REQUIRE(writeFile(filePath, "content"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->remove(dirPath));
-    EXPECT_FALSE(QDir(dirPath).exists());
+    REQUIRE(facade->remove(dirPath));
+    CHECK_FALSE(QDir(dirPath).exists());
 }
 
-TEST(FileOperationsFacadeRemove, RemovesNestedDirectoryTree) {
+TEST_CASE("FileOperationsFacade remove removes nested directory tree") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString dirPath = base.filePath("dir");
     const QString nestedDir = QDir(dirPath).filePath("nested");
     const QString filePath = QDir(nestedDir).filePath("file.txt");
 
-    ASSERT_TRUE(QDir().mkpath(nestedDir));
-    ASSERT_TRUE(writeFile(filePath, "nested"));
+    REQUIRE(QDir().mkpath(nestedDir));
+    REQUIRE(writeFile(filePath, "nested"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->remove(dirPath));
-    EXPECT_FALSE(QDir(dirPath).exists());
+    REQUIRE(facade->remove(dirPath));
+    CHECK_FALSE(QDir(dirPath).exists());
 }
 
-TEST(FileOperationsFacadeRemove, MissingPathReturnsFalse) {
+TEST_CASE("FileOperationsFacade remove missing path returns false") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString path = base.filePath("missing.txt");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->remove(path));
+    CHECK_FALSE(facade->remove(path));
 }
 
-TEST(FileOperationsFacadeCreateDir, CreatesDirectory) {
+TEST_CASE("FileOperationsFacade createDir creates directory") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString dirPath = base.filePath("newdir");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->createDir(dirPath));
-    EXPECT_TRUE(QDir(dirPath).exists());
+    REQUIRE(facade->createDir(dirPath));
+    CHECK(QDir(dirPath).exists());
 }
 
-TEST(FileOperationsFacadeCreateDir, CreatesNestedDirectories) {
+TEST_CASE("FileOperationsFacade createDir creates nested directories") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString dirPath = base.filePath("a/b/c");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->createDir(dirPath));
-    EXPECT_TRUE(QDir(dirPath).exists());
+    REQUIRE(facade->createDir(dirPath));
+    CHECK(QDir(dirPath).exists());
 }
 
-TEST(FileOperationsFacadeCreateDir, ReturnsTrueWhenExists) {
+TEST_CASE("FileOperationsFacade createDir returns true when exists") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString dirPath = base.filePath("exists");
 
-    ASSERT_TRUE(QDir().mkpath(dirPath));
+    REQUIRE(QDir().mkpath(dirPath));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->createDir(dirPath));
-    EXPECT_TRUE(QDir(dirPath).exists());
+    REQUIRE(facade->createDir(dirPath));
+    CHECK(QDir(dirPath).exists());
 }
 
-TEST(FileOperationsFacadeCreateDir, FailsWhenPathIsFile) {
+TEST_CASE("FileOperationsFacade createDir fails when path is file") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString path = base.filePath("file.txt");
 
-    ASSERT_TRUE(writeFile(path, "file"));
+    REQUIRE(writeFile(path, "file"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->createDir(path));
+    CHECK_FALSE(facade->createDir(path));
 }
 
-TEST(FileOperationsFacadeCreateDir, SupportsSpacesInPath) {
+TEST_CASE("FileOperationsFacade createDir supports spaces in path") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString dirPath = base.filePath("dir with spaces");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_TRUE(facade->createDir(dirPath));
-    EXPECT_TRUE(QDir(dirPath).exists());
+    REQUIRE(facade->createDir(dirPath));
+    CHECK(QDir(dirPath).exists());
 }
 
-TEST(FileOperationsFacadeGetLastError, CopyFailureContainsCannotCopy) {
+TEST_CASE("FileOperationsFacade getLastError copy failure contains message") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("missing.txt");
     const QString dst = base.filePath("dest/missing.txt");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->copy(src, dst));
-    EXPECT_TRUE(facade->getLastError().contains("Cannot copy file"));
+    CHECK_FALSE(facade->copy(src, dst));
+    CHECK(facade->getLastError().contains("Cannot copy file"));
 }
 
-TEST(FileOperationsFacadeGetLastError, MoveFailureContainsCannotMove) {
+TEST_CASE("FileOperationsFacade getLastError move failure contains message") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("missing.txt");
     const QString dst = base.filePath("dest/missing.txt");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->move(src, dst));
-    EXPECT_TRUE(facade->getLastError().contains("Cannot move"));
+    CHECK_FALSE(facade->move(src, dst));
+    CHECK(facade->getLastError().contains("Cannot move"));
 }
 
-TEST(FileOperationsFacadeGetLastError, RemoveFailureContainsCannotRemove) {
+TEST_CASE("FileOperationsFacade getLastError remove failure contains message") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString path = base.filePath("missing.txt");
 
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->remove(path));
-    EXPECT_TRUE(facade->getLastError().contains("Cannot remove"));
+    CHECK_FALSE(facade->remove(path));
+    CHECK(facade->getLastError().contains("Cannot remove"));
 }
 
-TEST(FileOperationsFacadeGetLastError, CreateDirFailureContainsCannotCreate) {
+TEST_CASE("FileOperationsFacade getLastError createDir failure contains message") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString path = base.filePath("file.txt");
 
-    ASSERT_TRUE(writeFile(path, "file"));
+    REQUIRE(writeFile(path, "file"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->createDir(path));
-    EXPECT_TRUE(facade->getLastError().contains("Cannot create directory"));
+    CHECK_FALSE(facade->createDir(path));
+    CHECK(facade->getLastError().contains("Cannot create directory"));
 }
 
-TEST(FileOperationsFacadeGetLastError, MoveFailureContainsCannotCreateDestinationDirectory) {
+TEST_CASE("FileOperationsFacade getLastError move failure cannot create destination directory") {
     QTemporaryDir tempDir;
-    ASSERT_TRUE(tempDir.isValid());
+    REQUIRE(tempDir.isValid());
     QDir base(tempDir.path());
     const QString src = base.filePath("source.txt");
     const QString blockingFile = base.filePath("blocked");
     const QString dst = QDir(blockingFile).filePath("target.txt");
 
-    ASSERT_TRUE(writeFile(src, "content"));
-    ASSERT_TRUE(writeFile(blockingFile, "block"));
+    REQUIRE(writeFile(src, "content"));
+    REQUIRE(writeFile(blockingFile, "block"));
     auto facade = FileOperationsFacade::getInstance();
-    EXPECT_FALSE(facade->move(src, dst));
-    EXPECT_TRUE(facade->getLastError().contains("Cannot create destination directory"));
+    CHECK_FALSE(facade->move(src, dst));
+    CHECK(facade->getLastError().contains("Cannot create destination directory"));
 }
